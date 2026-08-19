@@ -56,11 +56,35 @@ if st.button("Predict Churn"):
     }
     input_df = pd.DataFrame(input_dict)
 
-    # Encode categorical columns the same way as training (LabelEncoder per column)
-    from sklearn.preprocessing import LabelEncoder
-    le = LabelEncoder()
-    for col in input_df.select_dtypes(include='object').columns:
-        input_df[col] = le.fit_transform(input_df[col])
+    # Encode categorical columns using the SAME mapping LabelEncoder produced
+    # during training (it assigns integers in alphabetical order of the
+    # category names). Re-fitting LabelEncoder on a single row (as before)
+    # always outputs 0 for whatever category was selected, which is wrong -
+    # these explicit mappings fix that.
+    encoding_maps = {
+        'gender': {'Female': 0, 'Male': 1},
+        'Partner': {'No': 0, 'Yes': 1},
+        'Dependents': {'No': 0, 'Yes': 1},
+        'PhoneService': {'No': 0, 'Yes': 1},
+        'MultipleLines': {'No': 0, 'No phone service': 1, 'Yes': 2},
+        'InternetService': {'DSL': 0, 'Fiber optic': 1, 'No': 2},
+        'OnlineSecurity': {'No': 0, 'No internet service': 1, 'Yes': 2},
+        'OnlineBackup': {'No': 0, 'No internet service': 1, 'Yes': 2},
+        'DeviceProtection': {'No': 0, 'No internet service': 1, 'Yes': 2},
+        'TechSupport': {'No': 0, 'No internet service': 1, 'Yes': 2},
+        'StreamingTV': {'No': 0, 'No internet service': 1, 'Yes': 2},
+        'StreamingMovies': {'No': 0, 'No internet service': 1, 'Yes': 2},
+        'Contract': {'Month-to-month': 0, 'One year': 1, 'Two year': 2},
+        'PaperlessBilling': {'No': 0, 'Yes': 1},
+        'PaymentMethod': {
+            'Bank transfer (automatic)': 0,
+            'Credit card (automatic)': 1,
+            'Electronic check': 2,
+            'Mailed check': 3,
+        },
+    }
+    for col, mapping in encoding_maps.items():
+        input_df[col] = input_df[col].map(mapping)
 
     prediction = model.predict(input_df)[0]
     probability = model.predict_proba(input_df)[0][1]
